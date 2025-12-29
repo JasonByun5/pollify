@@ -154,7 +154,7 @@ function NewPoll(){
   
     try{
       const res = await fetch("/api/polls", {
-        method:"POST",
+        method:"GET",
         body: formData,
       });
 

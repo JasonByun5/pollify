@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { createPoll, getAllPolls } from '@/lib/db/polls';
+import { createPoll, getAllPolls, getPollsByAuthor } from '@/lib/db/polls';
 
+
+// creates a new poll, based on form-data submission
 export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient();
@@ -96,6 +98,8 @@ export async function POST(request: NextRequest) {
   }
 }
 
+
+//gets all polls
 export async function GET(request: NextRequest) {
   try {
     const polls = await getAllPolls();
