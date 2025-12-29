@@ -9,6 +9,7 @@ function ViewPoll () {
     const [user, setUser] = useState(null);
   const [polls, setPolls] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const router = useRouter();
 
   //checks for user auth
   useEffect(() => {
@@ -81,12 +82,13 @@ function ViewPoll () {
             polls.map((poll) => (
             <div className="w-full bg-gray-100 p-3 rounded-lg mb-5 grid grid-cols-4 gap-1">
               <p>{poll.title}</p>
+              <p>{poll.poll_id}</p>
               <p> {poll.type} </p>
               <p> {new Date(poll.created_at).toLocaleDateString()}</p>
                <button 
                   type="submit" 
                   className="bg-red-200 rounded-full text-xl"
-                  //onClick={() => navigate(`/result/${poll.pollId}`)}
+                  onClick={() => router.push(`/polls/${poll.poll_id}/view`)}
                 >📊</button>
             </div>
           ))}

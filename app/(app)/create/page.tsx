@@ -3,7 +3,7 @@
 import {useState, useRef, useEffect} from "react";
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import OptionCard from "../../../../components/other/optionCard";
+import OptionCard from "../../../components/other/optionCard";
 
 /*
 - need to confirm the way we are sending data is like mockPoll.json
