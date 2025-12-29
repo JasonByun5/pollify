@@ -1,10 +1,9 @@
 import { createServerClient } from "@supabase/ssr";
+import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 
 /**
- * Especially important if using Fluid compute: Don't put this client in a
- * global variable. Always create a new client within each function when using
- * it.
+ * Regular client with RLS policies (for user-authenticated operations)
  */
 export async function createClient() {
   const cookieStore = await cookies();
@@ -30,5 +29,21 @@ export async function createClient() {
         },
       },
     },
+  );
+}
+
+/**
+ * Service role client that bypasses RLS (for server-side operations)
+ */
+export function createServiceClient() {
+  return createSupabaseClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
+    }
   );
 }

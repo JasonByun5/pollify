@@ -141,8 +141,15 @@ function NewPoll(){
     const formData = new FormData();
     
     formData.append("payload", JSON.stringify(payload));
-    options.forEach((o) => {
-      formData.append("files", o.file);
+    
+    // Append files in order to match options array
+    options.forEach((o, index) => {
+      if (o.file) {
+        formData.append("files", o.file);
+      } else {
+        // Append empty file if no file to maintain index alignment
+        formData.append("files", new File([], ""));
+      }
     });
   
     try{
@@ -159,7 +166,6 @@ function NewPoll(){
 
       setNewPollId(data.pollId);
       setShowSuccess(true);
-
       
       setPollTitle('');
       setPollDesc('');

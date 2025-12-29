@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { createPoll, getAllPolls } from '@/lib/db/polls';
 
 export async function POST(request: NextRequest) {
   try {
@@ -15,15 +16,42 @@ export async function POST(request: NextRequest) {
 
     const { author, title, desc, type, options } = JSON.parse(payloadString);
 
+    // Generate a 6-digit poll ID (100000-999999)
+    const generatePollId = () => {
+      return Math.floor(Math.random() * 900000) + 100000;
+    };
+
+    let pollId = generatePollId();
+    
+    // Check if poll ID already exists and regenerate if needed
+    const { data: existingPoll } = await supabase
+      .from('polls')
+      .select('poll_id')
+      .eq('poll_id', pollId)
+      .single();
+    
+    // If poll ID exists, try a few more times
+    let attempts = 0;
+    while (existingPoll && attempts < 5) {
+      pollId = generatePollId();
+      const { data: checkAgain } = await supabase
+        .from('polls')
+        .select('poll_id')
+        .eq('poll_id', pollId)
+        .single();
+      if (!checkAgain) break;
+      attempts++;
+    }
+
     // Handle file uploads to Supabase Storage
-    const uploadOptions = await Promise.all(
+    const pollOptions = await Promise.all(
       options.map(async (option: any, idx: number) => {
         let imageUrl = '';
         
-        const file = formData.get(`files`) as File;
+        const file = formData.getAll('files')[idx] as File;
         if (file && file.size > 0) {
           // Upload to Supabase Storage
-          const fileName = `poll-${Date.now()}-${idx}-${file.name}`;
+          const fileName = `poll-${pollId}-${idx}-${file.name}`;
           const { data: uploadData, error: uploadError } = await supabase.storage
             .from('poll-images')
             .upload(fileName, file);
@@ -40,37 +68,27 @@ export async function POST(request: NextRequest) {
         }
 
         return {
-          index: idx + 1,
           title: option.name,
-          desc: option.desc,
+          description: option.desc,
           vote_count: 0,
           image_url: imageUrl,
         };
       })
     );
 
-    // Insert poll into Supabase database
-    const { data: poll, error: insertError } = await supabase
-      .from('polls')
-      .insert({
-        poll_id: Date.now(),
-        author,
-        title,
-        description: desc,
-        type,
-        options: uploadOptions,
-        created_at: new Date().toISOString()
-      })
-      .select()
-      .single();
+    // Create poll and options using the new database structure
+    const pollData = {
+      poll_id: pollId,
+      author,
+      title,
+      description: desc,
+      type,
+    };
 
-    if (insertError) {
-      console.error('Database insert error:', insertError);
-      return NextResponse.json({ error: 'Failed to create poll' }, { status: 500 });
-    }
+    const result = await createPoll(pollData, pollOptions);
 
-    console.log('✅ Inserted new poll!', poll.id);
-    return NextResponse.json({ pollId: poll.poll_id, ...poll }, { status: 201 });
+    console.log('✅ Inserted new poll!', result.poll.id);
+    return NextResponse.json({ pollId: result.poll.poll_id, ...result }, { status: 201 });
 
   } catch (err) {
     console.error('Error creating poll:', err);
@@ -80,18 +98,7 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
-    const supabase = await createClient();
-    
-    const { data: polls, error } = await supabase
-      .from('polls')
-      .select('*')
-      .order('created_at', { ascending: false });
-
-    if (error) {
-      console.error('Database query error:', error);
-      return NextResponse.json({ error: 'Failed to fetch polls' }, { status: 500 });
-    }
-
+    const polls = await getAllPolls();
     return NextResponse.json(polls);
   } catch (err) {
     console.error('Error fetching polls:', err);

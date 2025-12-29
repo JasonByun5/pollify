@@ -1,11 +1,13 @@
-import { createClient } from '@/lib/supabase/server';
+import { createClient, createServiceClient } from '@/lib/supabase/server';
 
 export interface PollOption {
-  index: number;
+  id: string;
+  poll_id: number;
   title: string;
-  desc: string;
+  description: string;
   vote_count: number;
   image_url: string;
+  created_at: string;
 }
 
 export interface Poll {
@@ -15,91 +17,234 @@ export interface Poll {
   title: string;
   description: string;
   type: string;
-  options: PollOption[];
   created_at: string;
 }
 
-export async function createPoll(pollData: Omit<Poll, 'id' | 'created_at'>) {
-  const supabase = await createClient();
+export interface PollWithOptions extends Poll {
+  poll_options: PollOption[];
+}
+
+export interface Vote {
+  id: string;
+  poll_id: number;
+  option_id: string;
+  user_id: string;
+  created_at: string;
+}
+
+export async function createPoll(
+  pollData: Omit<Poll, 'id' | 'created_at'>, 
+  options: Omit<PollOption, 'id' | 'poll_id' | 'created_at'>[]
+) {
+  const supabase = createServiceClient(); // Use service client to bypass RLS
   
-  const { data, error } = await supabase
+  // First, create the poll
+  const { data: poll, error: pollError } = await supabase
     .from('polls')
     .insert({
-      ...pollData,
+      poll_id: pollData.poll_id,
+      author: pollData.author,
+      title: pollData.title,
+      description: pollData.description,
+      type: pollData.type,
       created_at: new Date().toISOString()
     })
     .select()
     .single();
 
-  if (error) throw error;
-  return data;
+  if (pollError) throw pollError;
+
+  // Then, create the poll options
+  const pollOptions = options.map(option => ({
+    poll_id: poll.poll_id,
+    title: option.title,
+    description: option.description,
+    vote_count: option.vote_count || 0,
+    image_url: option.image_url || '',
+    created_at: new Date().toISOString()
+  }));
+
+  const { data: createdOptions, error: optionsError } = await supabase
+    .from('poll_options')
+    .insert(pollOptions)
+    .select();
+
+  if (optionsError) {
+    // If options creation fails, we should clean up the poll
+    await supabase.from('polls').delete().eq('id', poll.id);
+    throw optionsError;
+  }
+
+  return { poll, options: createdOptions };
 }
 
-export async function getAllPolls() {
-  const supabase = await createClient();
+export async function getAllPolls(): Promise<PollWithOptions[]> {
+  const supabase = createServiceClient();
   
-  const { data, error } = await supabase
+  const { data: polls, error: pollsError } = await supabase
     .from('polls')
-    .select('*')
+    .select(`
+      *,
+      poll_options (*)
+    `)
     .order('created_at', { ascending: false });
 
-  if (error) throw error;
-  return data;
+  if (pollsError) throw pollsError;
+  return polls || [];
 }
 
-export async function getPollById(pollId: number) {
-  const supabase = await createClient();
+export async function getPollById(pollId: number): Promise<PollWithOptions> {
+  const supabase = createServiceClient();
   
-  const { data, error } = await supabase
+  const { data: poll, error } = await supabase
     .from('polls')
-    .select('*')
+    .select(`
+      *,
+      poll_options (*)
+    `)
     .eq('poll_id', pollId)
     .single();
 
   if (error) throw error;
-  return data;
+  return poll;
 }
 
-export async function getPollsByAuthor(author: string) {
-  const supabase = await createClient();
+export async function getPollsByAuthor(author: string): Promise<PollWithOptions[]> {
+  const supabase = createServiceClient();
   
-  const { data, error } = await supabase
+  const { data: polls, error } = await supabase
     .from('polls')
-    .select('*')
+    .select(`
+      *,
+      poll_options (*)
+    `)
     .eq('author', author)
     .order('created_at', { ascending: false });
 
   if (error) throw error;
-  return data;
+  return polls || [];
 }
 
-export async function updatePollVotes(pollId: number, optionIndex: number) {
-  const supabase = await createClient();
+export async function updatePollVotes(pollId: number, optionId: string, userId?: string) {
+  const supabase = createServiceClient();
   
-  // First get the current poll
-  const { data: poll, error: fetchError } = await supabase
-    .from('polls')
-    .select('options')
-    .eq('poll_id', pollId)
+  // If userId is provided, add a vote record
+  if (userId) {
+    const { error: voteError } = await supabase
+      .from('votes')
+      .insert({
+        poll_id: pollId,
+        option_id: optionId,
+        user_id: userId,
+        created_at: new Date().toISOString()
+      });
+
+    if (voteError) throw voteError;
+  }
+
+  // First get the current vote count
+  const { data: currentOption, error: fetchError } = await supabase
+    .from('poll_options')
+    .select('vote_count')
+    .eq('id', optionId)
     .single();
 
   if (fetchError) throw fetchError;
 
-  // Update the vote count for the specific option
-  const updatedOptions = poll.options.map((option: PollOption) => 
-    option.index === optionIndex 
-      ? { ...option, vote_count: option.vote_count + 1 }
-      : option
-  );
+  // Increment the vote count
+  const newVoteCount = (currentOption.vote_count || 0) + 1;
 
-  // Update the poll with new options
+  // Update the option with the new vote count
   const { data, error } = await supabase
-    .from('polls')
-    .update({ options: updatedOptions })
-    .eq('poll_id', pollId)
+    .from('poll_options')
+    .update({ 
+      vote_count: newVoteCount
+    })
+    .eq('id', optionId)
     .select()
     .single();
 
   if (error) throw error;
   return data;
+}
+
+// Check if user has already voted on a poll
+export async function hasUserVoted(pollId: number, userId: string): Promise<boolean> {
+  const supabase = createServiceClient();
+  
+  const { data, error } = await supabase
+    .from('votes')
+    .select('id')
+    .eq('poll_id', pollId)
+    .eq('user_id', userId)
+    .single();
+
+  if (error && error.code !== 'PGRST116') throw error; // PGRST116 is "not found"
+  return !!data;
+}
+
+// Get user's vote for a specific poll
+export async function getUserVote(pollId: number, userId: string): Promise<Vote | null> {
+  const supabase = createServiceClient();
+  
+  const { data, error } = await supabase
+    .from('votes')
+    .select('*')
+    .eq('poll_id', pollId)
+    .eq('user_id', userId)
+    .single();
+
+  if (error && error.code !== 'PGRST116') throw error;
+  return data;
+}
+
+// Delete a poll and its associated options and votes
+export async function deletePoll(pollId: number) {
+  const supabase = createServiceClient();
+  
+  // Delete votes first (due to foreign key constraints)
+  const { error: votesError } = await supabase
+    .from('votes')
+    .delete()
+    .eq('poll_id', pollId);
+
+  if (votesError) throw votesError;
+
+  // Get options to delete associated images
+  const { data: options } = await supabase
+    .from('poll_options')
+    .select('image_url')
+    .eq('poll_id', pollId);
+
+  // Delete images from storage
+  if (options && options.length > 0) {
+    for (const option of options) {
+      if (option.image_url) {
+        try {
+          const urlParts = option.image_url.split('/');
+          const fileName = urlParts[urlParts.length - 1];
+          await supabase.storage.from('poll-images').remove([fileName]);
+        } catch (storageError) {
+          console.error('Error deleting image:', storageError);
+        }
+      }
+    }
+  }
+
+  // Delete poll options
+  const { error: optionsError } = await supabase
+    .from('poll_options')
+    .delete()
+    .eq('poll_id', pollId);
+
+  if (optionsError) throw optionsError;
+
+  // Finally, delete the poll
+  const { error: pollError } = await supabase
+    .from('polls')
+    .delete()
+    .eq('poll_id', pollId);
+
+  if (pollError) throw pollError;
+  return true;
 }
