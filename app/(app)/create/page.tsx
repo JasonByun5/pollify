@@ -13,7 +13,7 @@ import OptionCard from "../../../components/other/optionCard";
 
 function NewPoll(){
   const [pollTitle, setPollTitle] = useState('');
-  const [pollDesc, setPollDesc] = useState('');
+  const [pollDescription, setPollDescription] = useState('');
   const [pollType, setPollType] = useState('');
   const [options, setOptions] = useState([]);
   const [currentOptionTitle, setCurrentOptionTitle] = useState('');
@@ -21,6 +21,7 @@ function NewPoll(){
   const [currentOptionImage, setCurrentOptionImage] = useState(null);
   const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
 
   const [activeType, setActiveType] = useState(null);
@@ -74,6 +75,16 @@ function NewPoll(){
     setCurrentOptionTitle('');
     setCurrentOptionDesc('');
     setCurrentOptionImage(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  } 
+
+  const handleRemoveImage = () => {
+    setCurrentOptionImage(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
   } 
 
 
@@ -98,7 +109,7 @@ function NewPoll(){
       {
         index, 
         title: currentOptionTitle, 
-        desc: currentOptionDesc, 
+        description: currentOptionDesc, 
         imageUrl: previewURL, 
         file: currentOptionImage
       }
@@ -111,6 +122,8 @@ function NewPoll(){
   };
 
   const handleSubmitPoll = async () => {
+    // Prevent multiple submissions
+    if (isSubmitting) return;
 
     if (!pollTitle.trim()) {
       ShowCustomAlert("Please enter a poll title.");
@@ -125,16 +138,18 @@ function NewPoll(){
       return;
     }
 
+    setIsSubmitting(true); // Start loading
+
     console.log(user)
 
     const payload = {
       author: user.id,
       title: pollTitle,
-      desc: pollDesc,
+      description: pollDescription,
       type: pollType,
       options: options.map((o) => ({
         name: o.title, 
-        desc: o.desc
+        description: o.description
       })),
     };
 
@@ -154,7 +169,7 @@ function NewPoll(){
   
     try{
       const res = await fetch("/api/polls", {
-        method:"GET",
+        method:"POST",
         body: formData,
       });
 
@@ -168,7 +183,7 @@ function NewPoll(){
       setShowSuccess(true);
       
       setPollTitle('');
-      setPollDesc('');
+      setPollDescription('');
       setPollType('');
       setActiveType(null);
       setOptions([]);
@@ -176,6 +191,8 @@ function NewPoll(){
     } catch (err) {
       ShowCustomAlert("Error submitting poll.");
       console.error(err);
+    } finally {
+      setIsSubmitting(false); // Stop loading regardless of success/failure
     }
   }
 
@@ -226,7 +243,7 @@ function NewPoll(){
               <button
                 onClick={() => {
                   setShowSuccess(false);
-                  router.push("/viewPolls");
+                  router.push("/dashboard");
                 }}
                 className="bg-red-200 hover:bg-red-300 text-white px-3 py-1 rounded"
               >
@@ -261,8 +278,8 @@ function NewPoll(){
             <textarea 
               type="text"
               placeholder="Brief Description (E.g. Explain the options"
-              value={pollDesc}
-              onChange={(e) => setPollDesc(e.target.value)}
+              value={pollDescription}
+              onChange={(e) => setPollDescription(e.target.value)}
               className='w-full h-20 border border-gray-300 rounded px-3 py-1 text-sm'
             />
           </form>
@@ -292,7 +309,7 @@ function NewPoll(){
           <div className='flex flex-row'>
 
             {/*Option form*/}
-            <div className='w-2/5 h-100 border border-gray-300 rounded-xl mr-10 py-5'>
+            <div className='w-2/5 h-96 border border-gray-300 rounded-xl mr-10 py-5 overflow-y-auto'>
               <form className="w-full rounded-lg mb-5 flex flex-col items-center gap-1"  onSubmit={handleAddOption}>
                 <h1 className='text-lg font-bold'>Option Name* </h1>
                 <input 
@@ -314,25 +331,38 @@ function NewPoll(){
                 
 
                 <div className="flex gap-4">
-                  <label htmlFor="file-upload" className="bg-red-200 p-2 rounded-full text-xl">
-                    📤
-                  </label>
-                  <input 
-                    id ="file-upload"
-                    type="file"  
-                    ref={fileInputRef}
-                    accept="image/*" 
-                    onChange={(e) => setCurrentOptionImage(e.target.files[0])}
-                    className='hidden'
-                  />
+                  {currentOptionImage ? (
+                    <button 
+                      type="button"
+                      onClick={handleRemoveImage}
+                      className="bg-red-200 p-2 rounded-full text-xl text-red-600 font-extrabold hover:bg-red-300"
+                    >
+                      ✕
+                    </button>
+                  ) : (
+                    <>
+                      <label htmlFor="file-upload" className="bg-red-200 p-2 rounded-full text-xl cursor-pointer hover:bg-red-300">
+                        📤
+                      </label>
+                      <input 
+                        id ="file-upload"
+                        type="file"  
+                        ref={fileInputRef}
+                        accept="image/*" 
+                        onChange={(e) => setCurrentOptionImage(e.target.files[0])}
+                        className='hidden'
+                      />
+                    </>
+                  )}
+
                   <button 
-                    className="bg-red-200 p-2 rounded-full text-xl"
+                    className="bg-red-200 p-2 rounded-full text-xl hover:bg-red-300"
                     type="button"
                     onClick={() => handleTrashOption()}
                   >🗑️</button>
                   <button 
                     type="submit" 
-                    className="bg-red-200 p-2 rounded-full text-xl"
+                    className="bg-red-200 p-2 rounded-full text-xl hover:bg-red-300"
                   >➕</button>
                 </div>
 
@@ -360,9 +390,15 @@ function NewPoll(){
             
             <button
               onClick={handleSubmitPoll}
-              className="mt-4 px-4 py-2 bg-green-600 text-white rounded"
+              disabled={isSubmitting}
+              className={`mt-4 px-4 py-2 text-white rounded transition-colors ${
+                isSubmitting 
+                  ? 'bg-gray-400 cursor-not-allowed' 
+                  : 'bg-green-600 hover:bg-green-700'
+              }`}
             >
-            Submit Poll</button>
+              {isSubmitting ? 'Creating Poll...' : 'Submit Poll'}
+            </button>
 
           </div>
           

@@ -42,34 +42,61 @@ export async function GET(
   }
 }
 
-//updates a vote by Id
+//updates votes for yes/no/maybe polls
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ pollId: string }> }
 ) {
   try {
     const resolvedParams = await params;
-    const { optionId, userId } = await request.json();
+    const body = await request.json();
     
     const pollIdNum = parseInt(resolvedParams.pollId, 10);
     if (isNaN(pollIdNum)) {
       return NextResponse.json({ error: 'Invalid poll ID format' }, { status: 400 });
     }
 
-    if (!optionId) {
-      return NextResponse.json({ error: 'Option ID is required' }, { status: 400 });
+    // Handle single vote (for multi/rank polls)
+    if (body.optionId) {
+      const { optionId, userId } = body;
+      if (!optionId) {
+        return NextResponse.json({ error: 'Option ID is required' }, { status: 400 });
+      }
+
+      const updatedOption = await updatePollVotes(pollIdNum, optionId, userId);
+      
+      return NextResponse.json({ 
+        message: 'Vote recorded successfully',
+        option: updatedOption 
+      });
     }
 
-    const updatedOption = await updatePollVotes(pollIdNum, optionId, userId);
-    
-    return NextResponse.json({ 
-      message: 'Vote recorded successfully',
-      option: updatedOption 
-    });
+    // Handle multiple votes (for yes/no polls)
+    if (body.votes) {
+      const { votes } = body; // votes = {optionId: 'yes'|'no'|'maybe'}
+      
+      if (Object.keys(votes).length === 0) {
+        return NextResponse.json({ error: 'No votes provided' }, { status: 400 });
+      }
+
+      // Store each vote separately in the database
+      const votePromises = Object.entries(votes).map(async ([optionId, voteType]) => {
+        return await updatePollVotes(pollIdNum, optionId, null, voteType);
+      });
+
+      await Promise.all(votePromises);
+      
+      return NextResponse.json({ 
+        message: 'All votes recorded successfully',
+        votesCount: Object.keys(votes).length 
+      });
+    }
+
+    return NextResponse.json({ error: 'Invalid request format' }, { status: 400 });
   } catch (err) {
-    console.error('Error updating vote:', err);
+    console.error('Error updating votes:', err);
     return NextResponse.json({ 
-      error: 'Failed to update vote',
+      error: 'Failed to update votes',
       details: err instanceof Error ? err.message : 'Unknown error'
     }, { status: 500 });
   }

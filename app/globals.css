@@ -65,4 +65,13 @@
   body {
     @apply bg-background text-foreground;
   }
+  
+  /* Make all input text white */
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="number"],
+  textarea {
+    background-color: white !important;
+  }
 }

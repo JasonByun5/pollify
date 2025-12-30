@@ -125,9 +125,25 @@ export async function getPollsByAuthor(author: string): Promise<PollWithOptions[
   return polls || [];
 }
 
-export async function updatePollVotes(pollId: number, optionId: string, userId?: string) {
+export async function updatePollVotes(pollId: number, optionId: string, userId?: string, voteType?: string) {
   const supabase = createServiceClient();
   
+  // For yes/no/maybe polls, store vote type in user_id field as a temporary solution
+  if (voteType) {
+    const { error: voteError } = await supabase
+      .from('votes')
+      .insert({
+        poll_id: pollId,
+        option_id: optionId,
+        user_id: `vote_${voteType}`, // Store vote type here temporarily
+        created_at: new Date().toISOString()
+      });
+
+    if (voteError) throw voteError;
+    return { message: `${voteType.toUpperCase()} vote recorded` };
+  }
+
+  // For regular polls (multi/rank), increment vote count
   // If userId is provided, add a vote record
   if (userId) {
     const { error: voteError } = await supabase

@@ -78,9 +78,16 @@ function ViewPoll () {
       <div className="flex justify-center p-10 text-lg">
         <div className="w-3/5 bg-red-50 px-20 py-10 rounded-2xl flex flex-col shadow-md">
           <p className="mb-3 font-bold underline">Previous Polls:</p>
+          <div className="w-full bg-gray-100 p-3 rounded-lg mb-5 grid grid-cols-5 gap-1 underline font-bold">
+              <p>Title</p> 
+              <p>Poll ID</p>
+              <p> Poll Type </p>
+              <p> Created At </p>
+              <p>See Polls</p>
+            </div>
           { Array.isArray(polls) &&
             polls.map((poll) => (
-            <div className="w-full bg-gray-100 p-3 rounded-lg mb-5 grid grid-cols-4 gap-1">
+            <div className="w-full bg-gray-100 p-3 rounded-lg mb-5 grid grid-cols-5 gap-1">
               <p>{poll.title}</p>
               <p>{poll.poll_id}</p>
               <p> {poll.type} </p>

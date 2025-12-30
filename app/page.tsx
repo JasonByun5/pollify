@@ -33,7 +33,7 @@ export default function Home() {
                 placeholder="ex: 1234"
                 value={formCode}
                 onChange={(e) => setFormCode(e.target.value)}
-                className="border border-black rounded px-3 text-m "
+                className="border border-gray-300 rounded px-3 py-1 text-sm "
               />
               <button
                 type="submit"
@@ -45,21 +45,23 @@ export default function Home() {
           </form>
 
 
-          <div>
+          <div className='flex flex-row justify-evenly mt-10'>
             <button
               onClick={() => router.push('/dashboard')}
-              className="cursor-pointer border rounded px-3 bg-black text-red-50"
+              className="w-40 h-40 cursor-pointer border-2 border-black rounded-3xl bg-gray-100"
             >
-              Go to Dashboard
-
+              <img src="/images/DashboardPic.jpeg" alt="create a poll" className="w-full h-full object-cover rounded-3xl"/>
             </button>
 
-            <button
-              onClick={() => router.push('/create')}
-              className="ml-4 cursor-pointer border rounded px-3 bg-black text-red-50"
-            >
-              Create a Poll              
-            </button>
+
+            {/* Creating a poll button */}
+              <button
+                onClick={() => router.push('/create')}
+                className="w-40 h-40 cursor-pointer border-2 border-black rounded-3xl bg-gray-100"
+              >
+                <img src="/images/NewPollPic.png" alt="create a poll" className="w-full h-full object-cover rounded-3xl"/>       
+              </button>
+
           </div>
 
         </div>

@@ -32,6 +32,8 @@ interface Poll {
 
 function PollResult () {
 
+  const router = useRouter();
+
     const params = useParams();
   const pollId = params.pollId as string;
 
@@ -77,23 +79,23 @@ function PollResult () {
 
 
 
-//   const deletePoll = async (id) => {
+  const deletePoll = async () => {
 
-//     try{
-//       const res = await fetch(`/api/polls/deletePoll?pollId=${id}`, {
-//           method: 'DELETE',
-//       });
+    try{
+      const res = await fetch(`/api/polls/${pollId}`, {
+        method: 'DELETE'  // Add DELETE method
+      });
 
-//       if(!res.ok) throw new Error('HTTP ${res.status}');
+      if(!res.ok) throw new Error(`HTTP ${res.status}`);
 
-//       setPoll(null)
-//     } 
-//     catch(err){
-//       console.error(err);
-//       alert('Failed to delete poll.')
-//     }
+      setPoll(null)
+    } 
+    catch(err){
+      console.error(err);
+      alert('Failed to delete poll.')
+    }
 
-//   }
+  }
 
 
   if (loading) return <div>Loading...</div>;
@@ -108,10 +110,19 @@ function PollResult () {
 
               <div className="flex justify-center gap-3">
                 <button
-                  onClick={() => {
+                  onClick={async () => {
                     setDeleted(false);
-                    //navigate('/viewPolls')
-                    //deletePoll(pollId)
+                    setLoading(true);
+                    try {
+                      await deletePoll();
+                      // Add 3 second delay before navigating back
+                      setTimeout(() => {
+                        router.push('/dashboard');
+                      }, 1000);
+                    } catch (error) {
+                      // If delete fails, navigate immediately
+                      router.push('/dashboard');
+                    }
                   }}
                   className="bg-red-200 hover:bg-red-300 text-white px-3 py-1 rounded"
                 >
@@ -142,38 +153,51 @@ function PollResult () {
             <p>Total Votes: {totalVotes}</p>
           </div>
 
-          <div className="w-full bg-gray-100 p-3 rounded-lg mb-5 grid grid-cols-3 gap-1">
-            <p>
-              Option
-            </p>
-            <p>
-              Votes
-            </p>
-            <p>
-              Percentage
-            </p>
-          </div>
-          { Array.isArray(poll.poll_options) && poll.poll_options.map((opt) => { 
-            const percentage = totalVotes > 0 ? (opt.vote_count / totalVotes * 100).toFixed(1) : '0';
-            return (
-            <div key={opt.id} className="w-full bg-white p-3 rounded-lg mb-3 grid grid-cols-3 gap-4 items-center">
-              <div className="flex flex-col items-center">
-                {opt.image_url && (
-                  <img 
-                    src={opt.image_url} 
-                    alt={opt.title} 
-                    className="h-16 w-16 object-contain mb-2"/>
-                )}
-                <p className="font-semibold">{opt.title}</p>
-                {opt.description && <p className="text-sm text-gray-600">{opt.description}</p>}
-              </div>
-              <p className="text-center text-lg">{opt.vote_count}</p>
-              <p className="text-center text-lg font-bold">{percentage}%</p>
-            </div>
-            );
-          })}
+            {poll.type === "multi" && (
+              <>
+                <div className="w-full bg-gray-100 p-3 rounded-lg mb-5 grid grid-cols-3 gap-1">
+                  <p>Option</p>
+                  <p>Votes</p>
+                  <p>Percentage</p>
+                </div>
+                {Array.isArray(poll.poll_options) && poll.poll_options.map((opt) => { 
+                  const percentage = totalVotes > 0 ? (opt.vote_count / totalVotes * 100).toFixed(1) : '0';
+                  return (
+                    <div key={opt.id} className="w-full bg-white p-3 rounded-lg mb-3 grid grid-cols-3 gap-4 items-center">
+                      <div className="flex flex-col items-center">
+                        {opt.image_url && (
+                          <img 
+                            src={opt.image_url} 
+                            alt={opt.title} 
+                            className="h-16 w-16 object-contain mb-2"/>
+                        )}
+                        <p className="font-semibold">{opt.title}</p>
+                        {opt.description && <p className="text-sm text-gray-600">{opt.description}</p>}
+                      </div>
+                      <p className="text-center text-lg">{opt.vote_count}</p>
+                      <p className="text-center text-lg font-bold">{percentage}%</p>
+                    </div>
+                  );
+                })}
+              </>
+            )}
 
-           <button
+            {poll.type === "yes/no" && (
+              <>
+                <div className="w-full bg-gray-100 p-3 rounded-lg mb-5 grid grid-cols-4 gap-1">
+                  <p>Option</p>
+                  <p>Yes Votes</p>
+                  <p>No Votes</p>
+                  <p>Maybe Votes</p>
+                </div>
+                {/* Add yes/no vote results here when implemented */}
+              </>
+            )}
+
+
+
+
+          <button
             onClick={() => setDeleted(true)}
           >
             Delete Poll

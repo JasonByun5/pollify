@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { createServiceClient } from '@/lib/supabase/server';
 import { createPoll, getAllPolls, getPollsByAuthor } from '@/lib/db/polls';
 
 
@@ -7,6 +8,7 @@ import { createPoll, getAllPolls, getPollsByAuthor } from '@/lib/db/polls';
 export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient();
+    const serviceSupabase = createServiceClient(); // Add service client for storage
     
     // Parse form data
     const formData = await request.formData();
@@ -16,7 +18,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing payload in form-data' }, { status: 400 });
     }
 
-    const { author, title, desc, type, options } = JSON.parse(payloadString);
+    const { author, title, description, type, options } = JSON.parse(payloadString);
 
     // Generate a 6-digit poll ID (100000-999999)
     const generatePollId = () => {
@@ -51,27 +53,35 @@ export async function POST(request: NextRequest) {
         let imageUrl = '';
         
         const file = formData.getAll('files')[idx] as File;
+        console.log(`Processing file ${idx}:`, file?.name, file?.size);
+        
         if (file && file.size > 0) {
           // Upload to Supabase Storage
           const fileName = `poll-${pollId}-${idx}-${file.name}`;
-          const { data: uploadData, error: uploadError } = await supabase.storage
+          console.log(`Uploading to Supabase Storage: ${fileName}`);
+          
+          const { data: uploadData, error: uploadError } = await serviceSupabase.storage
             .from('poll-images')
             .upload(fileName, file);
 
           if (uploadError) {
             console.error('Upload error:', uploadError);
           } else {
+            console.log('Upload successful:', uploadData);
             // Get public URL
-            const { data: publicUrlData } = supabase.storage
+            const { data: publicUrlData } = serviceSupabase.storage
               .from('poll-images')
               .getPublicUrl(fileName);
             imageUrl = publicUrlData.publicUrl;
+            console.log('Generated public URL:', imageUrl);
           }
+        } else {
+          console.log(`No file or empty file for option ${idx}`);
         }
 
         return {
           title: option.name,
-          description: option.desc,
+          description: option.description,
           vote_count: 0,
           image_url: imageUrl,
         };
@@ -83,7 +93,7 @@ export async function POST(request: NextRequest) {
       poll_id: pollId,
       author,
       title,
-      description: desc,
+      description: description,
       type,
     };
 
