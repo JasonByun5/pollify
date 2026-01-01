@@ -6,6 +6,9 @@ export interface PollOption {
   title: string;
   description: string;
   vote_count: number;
+  yes_votes?: number;
+  no_votes?: number;
+  maybe_votes?: number;
   image_url: string;
   created_at: string;
 }
@@ -29,6 +32,7 @@ export interface Vote {
   poll_id: number;
   option_id: string;
   user_id: string;
+  vote_type?: 'yes' | 'no' | 'maybe' | 'multi';
   created_at: string;
 }
 
@@ -125,22 +129,57 @@ export async function getPollsByAuthor(author: string): Promise<PollWithOptions[
   return polls || [];
 }
 
-export async function updatePollVotes(pollId: number, optionId: string, userId?: string, voteType?: string) {
+export async function updatePollVotes(pollId: number, optionId: string, userId?: string, voteType?: 'yes' | 'no' | 'maybe') {
   const supabase = createServiceClient();
   
-  // For yes/no/maybe polls, store vote type in user_id field as a temporary solution
+  // For yes/no/maybe polls, update specific vote counter
   if (voteType) {
+    // Add the vote record with proper vote_type
     const { error: voteError } = await supabase
       .from('votes')
       .insert({
         poll_id: pollId,
         option_id: optionId,
-        user_id: `vote_${voteType}`, // Store vote type here temporarily
+        user_id: userId || 'anonymous',
+        vote_type: voteType,
         created_at: new Date().toISOString()
       });
 
     if (voteError) throw voteError;
-    return { message: `${voteType.toUpperCase()} vote recorded` };
+
+    // Get current vote counts
+    const { data: currentOption, error: fetchError } = await supabase
+      .from('poll_options')
+      .select('yes_votes, no_votes, maybe_votes')
+      .eq('id', optionId)
+      .single();
+
+    if (fetchError) throw fetchError;
+
+    // Prepare update based on vote type
+    const updateData: { [key: string]: number } = {};
+    switch (voteType) {
+      case 'yes':
+        updateData.yes_votes = (currentOption.yes_votes || 0) + 1;
+        break;
+      case 'no':
+        updateData.no_votes = (currentOption.no_votes || 0) + 1;
+        break;
+      case 'maybe':
+        updateData.maybe_votes = (currentOption.maybe_votes || 0) + 1;
+        break;
+    }
+
+    // Update the specific vote counter
+    const { data, error } = await supabase
+      .from('poll_options')
+      .update(updateData)
+      .eq('id', optionId)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
   }
 
   // For regular polls (multi/rank), increment vote count
@@ -152,6 +191,7 @@ export async function updatePollVotes(pollId: number, optionId: string, userId?:
         poll_id: pollId,
         option_id: optionId,
         user_id: userId,
+        vote_type: 'multi',
         created_at: new Date().toISOString()
       });
 

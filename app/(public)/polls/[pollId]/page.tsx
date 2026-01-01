@@ -5,6 +5,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import MultiVoteCard from "../../../../components/other/voting-options/multiVoteCard";
 import YesNoVoteCard from "../../../../components/other/voting-options/yesNoVoteCard";
+import RankVoteCard from "../../../../components/other/voting-options/rankVoteCard";
 
 interface PollOption {
   id: string;
@@ -32,12 +33,9 @@ export default function PollVote() {
   const pollId = params.pollId as string;
   const [poll, setPoll] = useState<Poll | null>(null);
   const [loading, setLoading] = useState(true);
-  const [ranking, setRanking] = useState<PollOption[]>([]);
 
   const [voted, setVoted] = useState(false);
   const router = useRouter();
-
-  const rows = [1, 2, 3,];
 
   useEffect(() => {
     setLoading(true);
@@ -65,14 +63,6 @@ export default function PollVote() {
 
   if (loading || !poll) return <div>Loading...</div>;
 
-  
-  function addToRanking(obj: PollOption) {
-    setRanking(prev => [...prev, obj]);
-  }
-
-  function removeFromRanking(id: string) {
-    setRanking(prev => prev.filter(opt => opt.id !== id));
-  }
   
   return (
     <div>
@@ -116,70 +106,7 @@ export default function PollVote() {
 
 
           {poll.type == "rank" && (
-              <div className="flex flex-row justify-evenly">
-                
-                <div className="grid grid-cols-[auto,1fr] gap-x-6 px-4">
-                  {/* Column 1: rank numbers */}
-                  <div className="flex flex-col justify-start space-y-6">
-                    {rows.map(num => (
-                      <div key={num} className="text-5xl font-bold text-blue-300">
-                        {num}
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Column 2: ranking slots */}
-                  <div className="flex flex-col justify-start space-y-6">
-                    {rows.map((_, idx) => {
-                      const opt = ranking[idx];
-                      return opt ? (
-                        <div
-                          key={opt.id}
-                          className="relative border rounded-xl bg-white shadow p-2 flex items-center justify-center"
-                        >
-                          <button
-                            className="absolute top-1 right-1 text-red-400"
-                            onClick={() => removeFromRanking(opt.id)}
-                          >
-                            ✕
-                          </button>
-                          <img
-                            src={opt.image_url}
-                            alt={opt.title}
-                            className="h-20 w-20 object-contain"
-                          />
-                        </div>
-                      ) : (
-                        <div
-                          key={idx}
-                          className="h-24 border-2 border-dashed border-gray-300 rounded-xl"
-                        />
-                      );
-                    })}
-                  </div>
-                </div>
-                  
-                  
-                  <div className="flex flex-col">
-                      {poll.poll_options.map((opt) => (
-                        <button 
-                          key={opt.id} className="w-45 border border-gray-100 rounded-xl bg-white shadow p-2 flex relative flex-col items-center"
-                          onClick={() => addToRanking(opt)}
-                        >
-                          <img 
-                            src={opt.image_url} 
-                            alt={opt.title} 
-                            className="h-30 object-contain" />
-                          <span className="mt-1 text-s px-2 font-bold bg-red-200 rounded"> {opt.title}</span>
-                          {(opt.description) && (
-                              <div className="mt-1 text-xs p-3 bg-gray-200 rounded">
-                                {opt.description}
-                              </div>
-                            )}
-                        </button>
-                    ))}
-                  </div>
-              </div>
+              <RankVoteCard options={poll.poll_options} pollId={pollId} setVoted={setVoted} />
           )}
 
 

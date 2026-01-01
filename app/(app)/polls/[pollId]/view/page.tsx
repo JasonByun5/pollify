@@ -11,6 +11,9 @@ interface PollOption {
   title: string;
   description: string;
   vote_count: number;
+  yes_votes?: number;
+  no_votes?: number;
+  maybe_votes?: number;
   image_url: string;
   created_at: string;
 }
@@ -61,7 +64,14 @@ function PollResult () {
         
         // Calculate total votes
         if (data.poll_options) {
-          const total = data.poll_options.reduce((sum, option) => sum + (option.vote_count || 0), 0);
+          let total = 0;
+          if (data.type === 'yes/no') {
+            total = data.poll_options.reduce((sum, option) => {
+              return sum + (option.yes_votes || 0) + (option.no_votes || 0) + (option.maybe_votes || 0);
+            }, 0);
+          } else {
+            total = data.poll_options.reduce((sum, option) => sum + (option.vote_count || 0), 0);
+          }
           setTotalVote(total);
         }
         
@@ -142,7 +152,7 @@ function PollResult () {
         
 
       <div className="flex justify-center p-10">
-        <div className="w-3/5 bg-red-50 px-20 py-10 rounded-2xl flex flex-col shadow-md">
+        <div className="w-6/10 bg-red-50 px-20 py-10 rounded-2xl flex flex-col shadow-md">
           <div className="w-full bg-white p-6 rounded-t-lg flex justify-evenly gap-1"> 
             <p className='text-[22px] font-bold'>{poll.title}</p>
             <p className='text-[18px] font-bold rounded px-2 py-1 w-24 bg-red-200 flex justify-center'>{poll.type}</p>
@@ -156,9 +166,9 @@ function PollResult () {
             {poll.type === "multi" && (
               <>
                 <div className="w-full bg-gray-100 p-3 rounded-lg mb-5 grid grid-cols-3 gap-1">
-                  <p>Option</p>
-                  <p>Votes</p>
-                  <p>Percentage</p>
+                  <p className="text-center font-semibold">Option</p>
+                  <p className="text-center font-semibold">Votes</p>
+                  <p className="text-center font-semibold">Percentage</p>
                 </div>
                 {Array.isArray(poll.poll_options) && poll.poll_options.map((opt) => { 
                   const percentage = totalVotes > 0 ? (opt.vote_count / totalVotes * 100).toFixed(1) : '0';
@@ -184,13 +194,34 @@ function PollResult () {
 
             {poll.type === "yes/no" && (
               <>
-                <div className="w-full bg-gray-100 p-3 rounded-lg mb-5 grid grid-cols-4 gap-1">
-                  <p>Option</p>
-                  <p>Yes Votes</p>
-                  <p>No Votes</p>
-                  <p>Maybe Votes</p>
+                <div className="w-full bg-gray-100 p-3 rounded-lg mb-5 grid grid-cols-5 gap-4 items-center">
+                  <p className="text-center font-semibold">Option</p>
+                  <p className="text-center font-semibold">Yes Votes</p>
+                  <p className="text-center font-semibold">No Votes</p>
+                  <p className="text-center font-semibold">Maybe Votes</p>
+                  <p className="text-center font-semibold">Net</p>
                 </div>
-                {/* Add yes/no vote results here when implemented */}
+                {Array.isArray(poll.poll_options) && poll.poll_options.map((opt) => { 
+                  return (
+                    <div key={opt.id} className="w-full bg-white p-3 rounded-lg mb-3 grid grid-cols-5 gap-4 items-center">
+                      <div className="flex flex-col items-center">
+                        {opt.image_url && (
+                          <img 
+                            src={opt.image_url} 
+                            alt={opt.title} 
+                            className="h-16 w-16 object-contain mb-2"/>
+                        )}
+                        <p className="font-semibold text-center">{opt.title}</p>
+                        {opt.description && <p className="text-sm text-gray-600 text-center">{opt.description}</p>}
+                      </div>
+                      <p className="text-center text-lg">{opt.yes_votes || 0}</p>
+                      <p className="text-center text-lg">{opt.no_votes || 0}</p>
+                      <p className="text-center text-lg">{opt.maybe_votes || 0}</p>
+                      <p className="text-center text-lg font-bold">{(opt.yes_votes || 0) - (opt.no_votes || 0)}</p>
+
+                    </div>
+                  );
+                })}
               </>
             )}
 
