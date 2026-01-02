@@ -14,14 +14,14 @@ I built Pollify because I wanted more flexibility than existing polling platform
 
 ---
 
-## 🚀 Tech Stack
+## Tech Stack
 - Next.js
 - Supabase (database + authentication)
 - Vercel (deployment)
 
 ---
 
-## 🔗 Using the App
+## Using the App
 The app is already deployed and ready to use.
 
 Live demo:  
