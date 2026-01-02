@@ -1,8 +1,20 @@
 import {useState} from "react";
 import OptionCard from "../optionCard";
 
+type PollOption = {
+  id: string;
+  title: string;
+  description?: string;
+  imageUrl?: string;
+};
 
-function MultiVoteCard ({options, pollId, setVoted}) {
+type MultiVoteCardProps = {
+  options: PollOption[];
+  pollId: string;
+  setVoted: (voted: boolean) => void;
+};
+
+function MultiVoteCard ({options, pollId, setVoted}: MultiVoteCardProps) {
 
   const [selected, setSelected] = useState('');
 
@@ -33,13 +45,13 @@ function MultiVoteCard ({options, pollId, setVoted}) {
 
   return(
     <div className="grid grid-cols-2 gap-y-4">
-      {options.map((opt) => (
+      {options.map((opt: PollOption) => (
         <div 
           key={opt.id}
           className="group flex relative flex-col items-center"
         >
           <label>
-          <OptionCard option={opt}/>
+          <OptionCard option={opt} onDelete={() => {}} />
             <input 
               type="radio" 
               name="vote" 

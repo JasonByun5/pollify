@@ -1,10 +1,20 @@
 import {useEffect, useState} from "react";
 import OptionCard from "../optionCard";
-import { PollOption } from "@/lib/db/polls";
 
+type PollOption = {
+  id: string;
+  title: string;
+  description?: string;
+  imageUrl?: string;
+};
 
+type MultiVoteCardProps = {
+  options: PollOption[];
+  pollId: string;
+  setVoted: (voted: boolean) => void;
+};
 
-function RankVoteCard ({options, pollId, setVoted}) {
+function RankVoteCard ({options, pollId, setVoted}: MultiVoteCardProps) {
 
   const [selected, setSelected] = useState('');
   const [rows, setRows] = useState<number[]>([]);
@@ -119,7 +129,7 @@ function RankVoteCard ({options, pollId, setVoted}) {
                     ✕
                     </button>
                     <img
-                    src={opt.image_url}
+                    src={opt.imageUrl}
                     alt={opt.title}
                     className="h-20 w-20 object-contain"
                     />
@@ -147,7 +157,7 @@ function RankVoteCard ({options, pollId, setVoted}) {
                     onDragStart={(e) => handleDragStart(e, opt)}
                     className="w-[200px] h-[200px] cursor-move hover:opacity-75 transition-opacity"
                 >
-                    <OptionCard option={opt}/>
+                    <OptionCard option={opt} onDelete={() => {}} />
                 </div>
             ))}
             </div>

@@ -2,10 +2,24 @@
 import { useState } from "react";
 import OptionCard from "../optionCard";
 
-function YesNoVoteCard ({options, pollId, setVoted}) {
-  const [votes, setVotes] = useState({}); // Store votes as {optionId: 'yes'|'no'|'maybe'}
+type PollOption = {
+  id: string;
+  title: string;
+  description?: string;
+  imageUrl?: string;
+};
 
-  const handleVoteSelection = (optionId, voteType) => {
+type MultiVoteCardProps = {
+  options: PollOption[];
+  pollId: string;
+  setVoted: (voted: boolean) => void;
+};
+
+
+function YesNoVoteCard ({options, pollId, setVoted}: MultiVoteCardProps) {
+  const [votes, setVotes] = useState<Record<string, 'yes' | 'no' | 'maybe'>>({});
+
+  const handleVoteSelection = (optionId: string, voteType: 'yes' | 'no' | 'maybe') => {
     setVotes(prev => ({
       ...prev,
       [optionId]: voteType
@@ -43,7 +57,7 @@ return(
     <div className="grid grid-cols-2 gap border-b" key={opt.id}>
       {/* Left column: Option Card */}
       <div className="flex justify-center items-center">
-        <OptionCard option={opt}/>
+        <OptionCard option={opt} onDelete={() => {}}/>
       </div>
 
       {/* Right column: Voting buttons */}
