@@ -4,6 +4,9 @@ import {useState, useRef, useEffect} from "react";
 import { useRouter } from 'next/navigation';
 import { useParams } from "next/navigation";
 
+// Force dynamic rendering to avoid prerendering issues with dynamic routes
+export const dynamic = 'force-dynamic';
+
 interface PollOption {
   id: string;
   poll_id: number;

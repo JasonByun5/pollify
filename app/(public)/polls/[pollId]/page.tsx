@@ -7,6 +7,9 @@ import MultiVoteCard from "../../../../components/other/voting-options/multiVote
 import YesNoVoteCard from "../../../../components/other/voting-options/yesNoVoteCard";
 import RankVoteCard from "../../../../components/other/voting-options/rankVoteCard";
 
+// Force dynamic rendering to avoid prerendering issues with dynamic routes
+export const dynamic = 'force-dynamic';
+
 interface PollOption {
   id: string;
   poll_id: number;

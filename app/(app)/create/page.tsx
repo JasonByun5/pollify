@@ -43,7 +43,7 @@ function NewPoll(){
   //for the popup
   const router = useRouter();
   const [showSuccess, setShowSuccess] = useState(false);
-  const [newPollId, setNewPollId] = useState(null);
+  const [newPollId, setNewPollId] = useState<string | null>(null);
 
 
 
