@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
 import { getPollById, deletePoll, updatePollVotes } from '@/lib/db/polls';
 
 // GET single poll by ID
@@ -81,7 +80,7 @@ export async function PATCH(
 
       // Store each vote separately in the database
       const votePromises = Object.entries(votes).map(async ([optionId, voteType]) => {
-        return await updatePollVotes(pollIdNum, optionId, null, voteType);
+        return await updatePollVotes(pollIdNum, optionId, undefined, voteType as 'yes' | 'no' | 'maybe');
       });
 
       await Promise.all(votePromises);

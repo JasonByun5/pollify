@@ -5,26 +5,34 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import OptionCard from "../../../components/other/optionCard";
 
-/*
-- need to confirm the way we are sending data is like mockPoll.json
-- Also need to add the date the poll was created
-*/
 
+type PollOption = {
+  index: number;
+  title: string;
+  description: string;
+  imageUrl: string | null;
+  file: File | null;
+};
+
+type User = {
+  id: string;
+  email: string;
+};
 
 function NewPoll(){
   const [pollTitle, setPollTitle] = useState('');
   const [pollDescription, setPollDescription] = useState('');
   const [pollType, setPollType] = useState('');
-  const [options, setOptions] = useState([]);
+  const [options, setOptions] = useState<PollOption[]>([]);
   const [currentOptionTitle, setCurrentOptionTitle] = useState('');
   const [currentOptionDesc, setCurrentOptionDesc] = useState('');
-  const [currentOptionImage, setCurrentOptionImage] = useState(null);
-  const [user, setUser] = useState(null);
+  const [currentOptionImage, setCurrentOptionImage] = useState<File | null>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   
 
-  const [activeType, setActiveType] = useState(null);
+  const [activeType, setActiveType] = useState<string | null>(null);
   const buttons = ['multi', 'yes/no', 'rank'];
 
   //for the toast notif
@@ -39,13 +47,13 @@ function NewPoll(){
 
 
 
-  const ShowCustomAlert = (msg) => {
+  const ShowCustomAlert = (msg: string) => {
     setAlertMsg(msg);
     setShowAlert(true);
     setTimeout(() => setShowAlert(false), 3000);
   }
 
-  const fileInputRef = useRef(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Check Supabase authentication
   useEffect(() => {
@@ -57,7 +65,7 @@ function NewPoll(){
       if (user) {
         setUser({
           id: user.sub,
-          email: user.email
+          email: user.email || ''
         });
       }
       setIsLoading(false);
@@ -67,7 +75,7 @@ function NewPoll(){
   }, []);
 
 
-  const handleRemoveOption = index => {
+  const handleRemoveOption = (index: number) => {
     setOptions(prev => prev.filter(opt => opt.index !== index));
   }
 
@@ -89,7 +97,7 @@ function NewPoll(){
 
 
 
-  const handleAddOption = (e) => {
+  const handleAddOption = (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!currentOptionTitle.trim()) {
@@ -118,7 +126,9 @@ function NewPoll(){
     setCurrentOptionTitle('');
     setCurrentOptionDesc('');
     setCurrentOptionImage(null);
-    fileInputRef.current.value = "";
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
   };
 
   const handleSubmitPoll = async () => {
@@ -141,6 +151,12 @@ function NewPoll(){
     setIsSubmitting(true); // Start loading
 
     console.log(user)
+
+    if (!user) {
+      ShowCustomAlert("User not authenticated.");
+      setIsSubmitting(false);
+      return;
+    }
 
     const payload = {
       author: user.id,
@@ -276,7 +292,6 @@ function NewPoll(){
             />
             <h1 className='text-[22px] font-bold' >Description (optional)</h1>
             <textarea 
-              type="text"
               placeholder="Brief Description (E.g. Explain the options"
               value={pollDescription}
               onChange={(e) => setPollDescription(e.target.value)}
@@ -321,7 +336,6 @@ function NewPoll(){
                 />
                 <h1 className='text-lg font-bold' >Option Description</h1>
                 <textarea 
-                  type="text"
                   placeholder="Brief Description (E.g. Explain the options)"
                   value={currentOptionDesc}
                   onChange={(e) => setCurrentOptionDesc(e.target.value)}
@@ -349,7 +363,7 @@ function NewPoll(){
                         type="file"  
                         ref={fileInputRef}
                         accept="image/*" 
-                        onChange={(e) => setCurrentOptionImage(e.target.files[0])}
+                        onChange={(e) => setCurrentOptionImage(e.target.files?.[0] || null)}
                         className='hidden'
                       />
                     </>

@@ -4,10 +4,22 @@ import {useState, useRef, useEffect} from "react";
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 
+type User = {
+  id: string;
+  email: string;
+};
+
+type Poll = {
+  title: string;
+  poll_id: string;
+  type: string;
+  created_at: string;
+};
+
 function ViewPoll () {
 
-    const [user, setUser] = useState(null);
-  const [polls, setPolls] = useState(null);
+    const [user, setUser] = useState<User | null>(null);
+  const [polls, setPolls] = useState<Poll[] | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
 
@@ -21,7 +33,7 @@ function ViewPoll () {
       if (user) {
         setUser({
           id: user.sub,
-          email: user.email
+          email: user.email || ''
         });
       }
       setIsLoading(false);
@@ -53,7 +65,7 @@ function ViewPoll () {
         setPolls(data);
 
       } catch (err) {
-        console.error(err.message);
+        console.error(err instanceof Error ? err.message : 'An error occurred');
       }
       
     };
@@ -86,8 +98,8 @@ function ViewPoll () {
               <p>See Polls</p>
             </div>
           { Array.isArray(polls) &&
-            polls.map((poll) => (
-            <div className="w-full bg-gray-100 p-3 rounded-lg mb-5 grid grid-cols-5 gap-1">
+            polls.map((poll: Poll) => (
+            <div key={poll.poll_id} className="w-full bg-gray-100 p-3 rounded-lg mb-5 grid grid-cols-5 gap-1">
               <p>{poll.title}</p>
               <p>{poll.poll_id}</p>
               <p> {poll.type} </p>

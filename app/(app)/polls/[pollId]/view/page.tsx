@@ -2,7 +2,6 @@
 
 import {useState, useRef, useEffect} from "react";
 import { useRouter } from 'next/navigation';
-import { createClient } from '@/lib/supabase/client';
 import { useParams } from "next/navigation";
 
 interface PollOption {
@@ -28,9 +27,6 @@ interface Poll {
   poll_options: PollOption[];
   created_at: string;
 }
-
-
-// I need to send a poll Id from the dashboard to this link so that I can render it
 
 
 function PollResult () {
@@ -66,11 +62,11 @@ function PollResult () {
         if (data.poll_options) {
           let total = 0;
           if (data.type === 'yes/no') {
-            total = data.poll_options.reduce((sum, option) => {
+            total = data.poll_options.reduce((sum: number, option: PollOption) => {
               return sum + (option.yes_votes || 0) + (option.no_votes || 0) + (option.maybe_votes || 0);
             }, 0);
           } else {
-            total = data.poll_options.reduce((sum, option) => sum + (option.vote_count || 0), 0);
+            total = data.poll_options.reduce((sum: number, option: PollOption) => sum + (option.vote_count || 0), 0);
           }
           setTotalVote(total);
         }
